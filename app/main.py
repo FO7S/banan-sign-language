@@ -1,0 +1,65 @@
+import logging
+from contextlib import asynccontextmanager
+
+from fastapi import FastAPI
+from fastapi.middleware.cors import CORSMiddleware
+from sqlalchemy import text
+
+from app.db.database import engine
+from app.db.models import Base
+from app.routes import challenge, leaderboard, progress, session, user
+
+logging.basicConfig(
+    level=logging.INFO,
+    format="%(asctime)s | %(levelname)-8s | %(name)s | %(message)s",
+)
+logger = logging.getLogger(__name__)
+
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    try:
+        async with engine.begin() as conn:
+            await conn.run_sync(Base.metadata.create_all)
+            # Add ended_at to sessions if the table already existed without it
+            await conn.execute(text(
+                "ALTER TABLE sessions ADD COLUMN IF NOT EXISTS ended_at TIMESTAMPTZ"
+            ))
+        logger.info("Database tables verified / created")
+    except Exception as e:
+        logger.warning(
+            f"Startup DB check failed — server will still run: {e}"
+        )
+    yield
+    try:
+        await engine.dispose()
+        logger.info("Database engine disposed")
+    except Exception:
+        pass
+
+
+app = FastAPI(
+    title="Banan API",
+    description="Backend for Banan — Arabic Sign Language learning game",
+    version="1.0.0",
+    lifespan=lifespan,
+)
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
+app.include_router(session.router)
+app.include_router(challenge.router)
+app.include_router(progress.router)
+app.include_router(leaderboard.router)
+app.include_router(user.router)
+
+
+@app.get("/health")
+async def health_check():
+    return {"status": "ok", "app": "Banan API"}
