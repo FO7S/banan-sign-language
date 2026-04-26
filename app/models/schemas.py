@@ -79,6 +79,23 @@ class SessionEndRequest(BaseModel):
 class UserRegisterRequest(BaseModel):
     user_id: uuid.UUID
     username: str
+    email: str
+    password: str
+    avatar_name: str | None = None
+    avatar_emoji: str | None = None
+
+
+class UserLoginRequest(BaseModel):
+    email: str
+    password: str
+
+
+class UserUpdateRequest(BaseModel):
+    user_id: uuid.UUID
+    username: str | None = None
+    password: str | None = None
+    avatar_name: str | None = None
+    avatar_emoji: str | None = None
 
 
 # ── Generic response wrapper ──────────────────────────────────────────────────

@@ -16,11 +16,16 @@ class User(Base):
 
     id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
     username: Mapped[str] = mapped_column(String, unique=True, nullable=False)
+    email: Mapped[Optional[str]] = mapped_column(String, unique=True, nullable=True)
+    password_hash: Mapped[Optional[str]] = mapped_column(String, nullable=True)
+    avatar_name: Mapped[Optional[str]] = mapped_column(String, nullable=True)
+    avatar_emoji: Mapped[Optional[str]] = mapped_column(String, nullable=True)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=lambda: datetime.now(timezone.utc))
 
     sessions: Mapped[list["Session"]] = relationship("Session", back_populates="user")
     attempts: Mapped[list["Attempt"]] = relationship("Attempt", back_populates="user")
     progress: Mapped["Progress"] = relationship("Progress", back_populates="user", uselist=False)
+    achievements: Mapped[list["Achievement"]] = relationship("Achievement", back_populates="user")
 
 
 class Session(Base):
@@ -67,3 +72,15 @@ class Attempt(Base):
 
     user: Mapped["User"] = relationship("User", back_populates="attempts")
     session: Mapped["Session"] = relationship("Session", back_populates="attempts")
+
+
+class Achievement(Base):
+    __tablename__ = "achievements"
+
+    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    user_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), ForeignKey("users.id"), nullable=False)
+    code: Mapped[str] = mapped_column(String, nullable=False)
+    unlocked: Mapped[bool] = mapped_column(Boolean, default=False)
+    unlocked_at: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True), nullable=True)
+
+    user: Mapped["User"] = relationship("User", back_populates="achievements")

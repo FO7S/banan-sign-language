@@ -7,7 +7,7 @@ from sqlalchemy import text
 
 from app.db.database import engine
 from app.db.models import Base
-from app.routes import challenge, leaderboard, progress, session, user
+from app.routes import achievements, challenge, leaderboard, progress, session, user
 
 logging.basicConfig(
     level=logging.INFO,
@@ -21,9 +21,20 @@ async def lifespan(app: FastAPI):
     try:
         async with engine.begin() as conn:
             await conn.run_sync(Base.metadata.create_all)
-            # Add ended_at to sessions if the table already existed without it
             await conn.execute(text(
                 "ALTER TABLE sessions ADD COLUMN IF NOT EXISTS ended_at TIMESTAMPTZ"
+            ))
+            await conn.execute(text(
+                "ALTER TABLE users ADD COLUMN IF NOT EXISTS email TEXT"
+            ))
+            await conn.execute(text(
+                "ALTER TABLE users ADD COLUMN IF NOT EXISTS password_hash TEXT"
+            ))
+            await conn.execute(text(
+                "ALTER TABLE users ADD COLUMN IF NOT EXISTS avatar_name TEXT"
+            ))
+            await conn.execute(text(
+                "ALTER TABLE users ADD COLUMN IF NOT EXISTS avatar_emoji TEXT"
             ))
         logger.info("Database tables verified / created")
     except Exception as e:
@@ -58,6 +69,7 @@ app.include_router(challenge.router)
 app.include_router(progress.router)
 app.include_router(leaderboard.router)
 app.include_router(user.router)
+app.include_router(achievements.router)
 
 
 @app.get("/health")

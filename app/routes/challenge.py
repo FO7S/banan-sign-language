@@ -2,16 +2,73 @@ import logging
 from datetime import datetime, timezone
 
 from fastapi import APIRouter, Depends, HTTPException
-from sqlalchemy import select
+from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.db.database import get_db
-from app.db.models import Attempt, Progress, Session
-from app.models.schemas import ChallengeSubmitRequest, success_response, error_response
+from app.db.models import Achievement, Attempt, Progress, Session
+from app.models.schemas import ChallengeSubmitRequest, error_response, success_response
 from app.services.game_logic import calculate_score, evaluate_answer, update_streak
 
 router = APIRouter(prefix="/challenge", tags=["challenge"])
 logger = logging.getLogger(__name__)
+
+
+async def _unlock_achievements(db: AsyncSession, user_id, progress: Progress, mode: str) -> None:
+    ach_result = await db.execute(
+        select(Achievement).where(Achievement.user_id == user_id)
+    )
+    achievements = {a.code: a for a in ach_result.scalars().all()}
+
+    letters_count = len(progress.letters_practiced or {})
+
+    word_count_result = await db.execute(
+        select(func.count()).select_from(Attempt).where(
+            Attempt.user_id == user_id,
+            Attempt.mode == "word",
+            Attempt.correct == True,
+        )
+    )
+    word_count = word_count_result.scalar()
+
+    free_count_result = await db.execute(
+        select(func.count()).select_from(Attempt).where(
+            Attempt.user_id == user_id,
+            Attempt.mode == "free",
+        )
+    )
+    free_count = free_count_result.scalar()
+
+    challenge_win_result = await db.execute(
+        select(func.count()).select_from(Attempt).where(
+            Attempt.user_id == user_id,
+            Attempt.mode == "challenge",
+            Attempt.correct == True,
+        )
+    )
+    challenge_wins = challenge_win_result.scalar()
+
+    rank_result = await db.execute(
+        select(func.count()).select_from(Progress).where(Progress.total_score > progress.total_score)
+    )
+    rank = rank_result.scalar() + 1
+
+    conditions = {
+        "first_letter": letters_count >= 1,
+        "pro_speller": word_count >= 5,
+        "sign_speaker": free_count >= 1,
+        "challenge_hero": challenge_wins >= 3,
+        "fire_streak": progress.best_streak >= 5,
+        "leaderboard_star": rank <= 3,
+    }
+
+    now = datetime.now(timezone.utc)
+    for code, met in conditions.items():
+        achievement = achievements.get(code)
+        if achievement and met and not achievement.unlocked:
+            achievement.unlocked = True
+            achievement.unlocked_at = now
+            logger.info(f"Achievement unlocked for user {user_id}: {code}")
 
 
 @router.post("/submit")
@@ -59,6 +116,10 @@ async def submit_challenge(body: ChallengeSubmitRequest, db: AsyncSession = Depe
             progress.letters_practiced = letters
 
         progress.updated_at = datetime.now(timezone.utc)
+
+        await db.flush()
+
+        await _unlock_achievements(db, body.user_id, progress, body.mode.value)
 
         await db.flush()
 
