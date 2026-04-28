@@ -7,8 +7,8 @@ pydantic==2.10.3
 pydantic-settings==2.6.1
 python-dotenv==1.0.1
 greenlet
-mediapipe==0.10.13
-opencv-python-headless
-Pillow==10.4.0
 tensorflow-cpu==2.17.0
-numpy<2
+numpy==1.26.4
+opencv-python-headless==4.9.0.80
+mediapipe==0.10.13
+Pillow==10.4.0

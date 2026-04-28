@@ -21,13 +21,8 @@ MODEL_PATH  = os.path.join(os.path.dirname(__file__), '..', '..', 'ml', 'model.t
 with open(LABELS_PATH, 'r', encoding='utf-8') as f:
     LABELS = json.load(f)
 
-try:
-    import tflite_runtime.interpreter as tflite
-    interpreter = tflite.Interpreter(model_path=MODEL_PATH)
-except ImportError:
-    import tensorflow as tf
-    interpreter = tf.lite.Interpreter(model_path=MODEL_PATH)
-
+import tensorflow as tf
+interpreter = tf.lite.Interpreter(model_path=MODEL_PATH)
 interpreter.allocate_tensors()
 input_details  = interpreter.get_input_details()
 output_details = interpreter.get_output_details()
