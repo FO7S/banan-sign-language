@@ -1,48 +1,48 @@
 # 🌿 Banan Backend | بنان
 
-**REST API for the Banan Arabic Sign Language Learning Game**
+*REST API for the Banan Arabic Sign Language Learning Game*
 
-Banan (بنان) is an AI-powered mobile app that teaches Arabic Sign Language to children — especially deaf and hard-of-hearing kids — through interactive gameplay. This repository contains the FastAPI backend responsible for game logic, user management, scoring, progress tracking, and optional hand detection testing.
+Banan (بنان) is an AI-powered mobile app that teaches Arabic Sign Language to children — especially deaf and hard-of-hearing kids — through interactive gameplay. This repository contains the FastAPI backend responsible for game logic, user management, scoring, progress tracking, and AI-powered sign language classification.
 
-> The main AI inference runs **on-device** in Flutter for real-time performance.  
-> The backend also provides an optional MediaPipe `/detect/hand` endpoint for testing, demos, or fallback use.
+> The backend provides full AI classification via /classify/sign — combining MediaPipe hand detection and MLP TFLite inference in a single endpoint.
 
----
+-----
 
 ## 🚀 Live API
 
-```text
+
 https://banan-sign-language-production.up.railway.app
-````
+
 
 Interactive docs:
 
-```text
-https://banan-sign-language-production.up.railway.app/docs
-```
 
----
+https://banan-sign-language-production.up.railway.app/docs
+
+
+-----
 
 ## 🛠 Tech Stack
 
-| Layer            | Technology          |
-| ---------------- | ------------------- |
-| Framework        | FastAPI             |
-| Database         | Supabase PostgreSQL |
-| ORM              | SQLAlchemy async    |
-| Driver           | asyncpg + NullPool  |
-| Validation       | Pydantic v2         |
-| Hand Detection   | MediaPipe Hands     |
-| Image Processing | Pillow + NumPy      |
-| Deployment       | Railway             |
-| Container        | Dockerfile          |
-| Server           | Uvicorn             |
+|Layer           |Technology                     |
+|----------------|-------------------------------|
+|Framework       |FastAPI                        |
+|Database        |Supabase (PostgreSQL)          |
+|ORM             |SQLAlchemy async + asyncpg     |
+|Connection Pool |NullPool (pgbouncer compatible)|
+|Validation      |Pydantic v2                    |
+|Hand Detection  |MediaPipe Hands                |
+|Classification  |MLP TFLite (39 ArSL classes)   |
+|Image Processing|Pillow + NumPy                 |
+|Server          |Uvicorn                        |
+|Deployment      |Railway                        |
+|Container       |Dockerfile (python:3.11-slim)  |
 
----
+-----
 
 ## 📁 Project Structure
 
-```text
+
 banan-backend/
 ├── app/
 │   ├── main.py
@@ -59,261 +59,264 @@ banan-backend/
 │   │   ├── leaderboard.py
 │   │   ├── user.py
 │   │   ├── achievements.py
-│   │   └── detect.py
+│   │   └── classify.py
 │   └── services/
 │       └── game_logic.py
+├── ml/
+│   ├── model.tflite       ← MLP model (63 inputs → 39 classes)
+│   └── labels.json        ← 39 ArSL class names
 ├── .env
 ├── .env.example
 ├── Dockerfile
 ├── Procfile
 └── requirements.txt
-```
 
----
+
+-----
 
 ## 📡 API Endpoints
 
 ### User
 
-| Method | Endpoint          | Description       |
-| ------ | ----------------- | ----------------- |
-| POST   | `/user/register`  | Register new user |
-| POST   | `/user/login`     | Login user        |
-| PUT    | `/user/update`    | Update user info  |
-| GET    | `/user/{user_id}` | Get user info     |
+|Method|Endpoint         |Description                            |
+|------|-----------------|---------------------------------------|
+|POST  |/user/register |Register with email + password + avatar|
+|POST  |/user/login    |Login with email + password            |
+|PUT   |/user/update   |Update name / password / avatar        |
+|GET   |/user/{user_id}|Get user info                          |
 
 ### Session
 
-| Method | Endpoint         | Description        |
-| ------ | ---------------- | ------------------ |
-| POST   | `/session/start` | Start game session |
-| POST   | `/session/end`   | End game session   |
+|Method|Endpoint        |Description                 |
+|------|----------------|----------------------------|
+|POST  |/session/start|Start a new game session    |
+|POST  |/session/end  |End session and save results|
 
 ### Challenge
 
-| Method | Endpoint            | Description                       |
-| ------ | ------------------- | --------------------------------- |
-| POST   | `/challenge/submit` | Submit answer and calculate score |
+|Method|Endpoint           |Description                                              |
+|------|-------------------|---------------------------------------------------------|
+|POST  |/challenge/submit|Submit answer — calculates score and unlocks achievements|
 
 ### Progress & Stats
 
-| Method | Endpoint                  | Description           |
-| ------ | ------------------------- | --------------------- |
-| GET    | `/progress/{user_id}`     | Get user progress     |
-| GET    | `/leaderboard`            | Get top users         |
-| GET    | `/achievements/{user_id}` | Get user achievements |
+|Method|Endpoint                 |Description                               |
+|------|-------------------------|------------------------------------------|
+|GET   |/progress/{user_id}    |Total score + rank + achievements + avatar|
+|GET   |/leaderboard           |Top 10 users by score                     |
+|GET   |/achievements/{user_id}|All 6 achievements with unlock status     |
 
-### Detection
+### Classification (AI)
 
-| Method | Endpoint       | Description                             |
-| ------ | -------------- | --------------------------------------- |
-| POST   | `/detect/hand` | Detect hand landmarks from base64 image |
+|Method|Endpoint          |Description                                         |
+|------|------------------|----------------------------------------------------|
+|POST  |/classify/sign  |Detect hand + classify ArSL letter from base64 image|
+|GET   |/classify/health|Check if model is loaded and ready                  |
 
-### Health
+### Default
 
-| Method | Endpoint  | Description      |
-| ------ | --------- | ---------------- |
-| GET    | `/health` | Check API status |
+|Method|Endpoint |Description     |
+|------|---------|----------------|
+|GET   |/health|API health check|
 
----
+-----
 
-## 🖐 Hand Detection Endpoint
+## 🤖 Classification Endpoint
 
-The backend includes an optional MediaPipe hand detection endpoint.
+The /classify/sign endpoint combines MediaPipe hand detection and MLP TFLite classification in a single call.
 
-This endpoint receives a base64 image and returns 21 normalized hand landmarks.
+### Pipeline
+
+
+base64 image
+→ MediaPipe Hands → 21 landmarks (x, y, z)
+→ Normalize landmarks (wrist subtraction + scale)
+→ MLP TFLite → 39 class probabilities
+→ Top prediction + confidence
+
 
 ### Request
 
-```json
+json
 {
   "image": "BASE64_IMAGE_STRING"
 }
-```
 
-### Success Response
 
-```json
+### Response — hand detected
+
+json
 {
   "success": true,
   "data": {
     "detected": true,
-    "landmarks": [
-      0.0,
-      0.0,
-      0.0
-    ]
+    "label": "baa",
+    "confidence": 0.97,
+    "landmarks": [0.0, 0.0, 0.0, 0.12, -0.34, ...]
   },
-  "message": "Hand detected"
+  "message": "Sign classified"
 }
-```
 
-### No Hand Detected Response
 
-```json
+### Response — no hand
+
+json
 {
   "success": true,
   "data": {
     "detected": false,
-    "landmarks": null
+    "label": null,
+    "confidence": null
   },
   "message": "No hand detected"
 }
-```
 
-### Notes
 
-* The endpoint uses MediaPipe Hands.
-* It extracts 21 hand landmarks.
-* Each landmark has `x`, `y`, and `z`.
-* Total output = 63 values.
-* Landmarks are normalized relative to the wrist.
-* This endpoint is useful for testing and demos.
-* For real-time gameplay, on-device detection in Flutter is still recommended.
+### Normalization (must match training exactly)
 
----
+python
+def normalize_landmarks(landmarks):
+    pts = np.array([[lm.x, lm.y, lm.z] for lm in landmarks])
+    wrist = pts[0].copy()
+    pts -= wrist                    # subtract wrist from all points
+    scale = np.max(np.abs(pts))     # find max absolute value
+    if scale > 0:
+        pts /= scale                # normalize to [-1, 1]
+    return pts.flatten().tolist()   # 63 values
+
+
+### Model Info
+
+|Property            |Value                         |
+|--------------------|------------------------------|
+|Architecture        |MLP (63 → 256 → 128 → 64 → 39)|
+|Classes             |39 ArSL letters               |
+|Model size          |68.5 KB                       |
+|Inference time      |~0.006 ms                     |
+|Train accuracy      |99.78%                        |
+|Val accuracy        |99.05%                        |
+|Test accuracy       |99.54%                        |
+|Confidence threshold|0.70                          |
+
+-----
 
 ## 🎮 Game Logic
 
-```python
-evaluate_answer(target, answer, confidence) -> bool
+python
+# Accept answer only if confidence >= 0.80
+evaluate_answer(target, answer, confidence) → bool
 
-calculate_score(correct, time_taken) -> int
+# base=10 + time_bonus=max(0, int((10-time_taken)*0.5))
+calculate_score(correct, time_taken) → int
 
-update_streak(current_streak, correct) -> int
-```
+# correct → streak+1 | wrong → streak=0
+update_streak(current_streak, correct) → int
 
-### Rules
 
-* Answer is accepted if confidence is high enough.
-* Correct answer increases streak.
-* Wrong answer resets streak.
-* Score depends on correctness and response time.
+-----
 
----
+## 🏆 Achievement Codes
+
+|Code            |Condition                   |
+|----------------|----------------------------|
+|first_letter    |letters_count >= 1          |
+|pro_speller     |5 words completed           |
+|sign_speaker    |1 attempt with mode=free    |
+|challenge_hero  |3 correct challenge attempts|
+|fire_streak     |best_streak >= 5            |
+|leaderboard_star|rank <= 3                   |
+
+-----
 
 ## 🗄 Database Schema
 
 ### users
 
-| Column        | Type     | Notes           |
-| ------------- | -------- | --------------- |
-| id            | UUID     | Primary key     |
-| username      | String   | Display name    |
-| email         | String   | Unique          |
-| password_hash | String   | Hashed password |
-| avatar_name   | String   | Avatar name     |
-| avatar_emoji  | String   | Avatar emoji    |
-| created_at    | DateTime | Creation time   |
+|Column       |Type    |Notes         |
+|-------------|--------|--------------|
+|id           |UUID    |Primary key   |
+|username     |String  |Display name  |
+|email        |String  |Unique        |
+|password_hash|String  |SHA-256 + salt|
+|avatar_name  |String  |e.g. “دولفي”  |
+|avatar_emoji |String  |e.g. “🐬”      |
+|created_at   |DateTime|              |
 
 ### sessions
 
-| Column     | Type     | Notes                            |
-| ---------- | -------- | -------------------------------- |
-| id         | UUID     | Primary key                      |
-| user_id    | UUID     | FK to users                      |
-| mode       | Enum     | letter / word / challenge / free |
-| score      | Integer  | Session score                    |
-| streak     | Integer  | Current streak                   |
-| created_at | DateTime | Start time                       |
-| ended_at   | DateTime | End time                         |
+|Column    |Type    |Notes                     |
+|----------|--------|--------------------------|
+|id        |UUID    |Primary key               |
+|user_id   |UUID    |FK → users                |
+|mode      |Enum    |letter/word/challenge/free|
+|score     |Integer |Session score             |
+|streak    |Integer |Current streak            |
+|created_at|DateTime|                          |
+|ended_at  |DateTime|Nullable                  |
 
 ### progress
 
-| Column            | Type     | Notes             |
-| ----------------- | -------- | ----------------- |
-| user_id           | UUID     | FK to users       |
-| total_score       | Integer  | Total score       |
-| best_streak       | Integer  | Best streak       |
-| letters_practiced | JSON     | Practiced letters |
-| updated_at        | DateTime | Last update       |
+|Column           |Type    |Notes               |
+|-----------------|--------|--------------------|
+|user_id          |UUID    |FK → users (unique) |
+|total_score      |Integer |All-time score      |
+|best_streak      |Integer |All-time best streak|
+|letters_practiced|JSON    |{“ba”: 10, “al”: 5} |
+|updated_at       |DateTime|                    |
 
 ### attempts
 
-| Column     | Type     | Notes             |
-| ---------- | -------- | ----------------- |
-| id         | UUID     | Primary key       |
-| user_id    | UUID     | FK to users       |
-| session_id | UUID     | FK to sessions    |
-| mode       | Enum     | Game mode         |
-| target     | String   | Expected answer   |
-| answer     | String   | User/model answer |
-| correct    | Boolean  | Correct or not    |
-| confidence | Float    | Model confidence  |
-| time_taken | Float    | Time in seconds   |
-| created_at | DateTime | Attempt time      |
+|Column    |Type    |Notes           |
+|----------|--------|----------------|
+|id        |UUID    |Primary key     |
+|user_id   |UUID    |FK → users      |
+|session_id|UUID    |FK → sessions   |
+|mode      |Enum    |                |
+|target    |String  |Expected letter |
+|answer    |String  |Model prediction|
+|correct   |Boolean |                |
+|confidence|Float   |0.0 – 1.0       |
+|time_taken|Float   |Seconds         |
+|created_at|DateTime|                |
 
 ### achievements
 
-| Column      | Type     | Notes            |
-| ----------- | -------- | ---------------- |
-| id          | UUID     | Primary key      |
-| user_id     | UUID     | FK to users      |
-| code        | String   | Achievement code |
-| unlocked    | Boolean  | Unlock status    |
-| unlocked_at | DateTime | Unlock time      |
+|Column     |Type    |Notes           |
+|-----------|--------|----------------|
+|id         |UUID    |Primary key     |
+|user_id    |UUID    |FK → users      |
+|code       |String  |Achievement code|
+|unlocked   |Boolean |                |
+|unlocked_at|DateTime|Nullable        |
 
----
-
-## 🏆 Achievement Codes
-
-```text
-first_letter
-pro_speller
-sign_speaker
-challenge_hero
-fire_streak
-leaderboard_star
-```
-
----
+-----
 
 ## 📦 Standard Response Format
 
-All endpoints follow this format:
-
-```json
+json
 {
   "success": true,
   "data": {},
   "message": "OK"
 }
-```
 
----
+
+-----
 
 ## ⚙️ Environment Variables
 
-Create a `.env` file locally:
-
-```env
-DATABASE_URL=postgresql+asyncpg://...
+env
+DATABASE_URL=postgresql+asyncpg://...supabase...
 CONFIDENCE_THRESHOLD=0.80
 COOLDOWN_SECONDS=1.0
 NO_HAND_TIMEOUT=2.0
-```
 
----
 
-## 🐳 Docker Deployment
+-----
 
-Railway uses the `Dockerfile` to run the backend.
+## 🐳 Dockerfile
 
-MediaPipe requires system libraries that are not always available in Railway default builds, such as:
-
-```text
-libgl1
-libglib2.0-0
-libxcb1
-libx11-6
-libxext6
-```
-
-The Dockerfile installs these dependencies manually.
-
-### Dockerfile
-
-```dockerfile
+dockerfile
 FROM python:3.11-slim
 
 RUN apt-get update && apt-get install -y \
@@ -333,153 +336,66 @@ RUN pip install -r requirements.txt
 COPY . .
 
 CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8080"]
-```
 
-### Important Notes
 
-Use:
+*Notes:*
 
-```text
-opencv-python-headless
-```
+- Use opencv-python-headless not opencv-python
+- Python 3.11 for MediaPipe compatibility
+- System libraries required by MediaPipe installed via apt
 
-Do not use:
-
-```text
-opencv-python
-```
-
-because the headless version is better for server environments.
-
-Python 3.11 is used because MediaPipe works more reliably with it.
-
----
-
-## 📦 Requirements
-
-Important packages:
-
-```text
-fastapi
-uvicorn
-sqlalchemy
-asyncpg
-pydantic
-python-dotenv
-mediapipe==0.10.13
-opencv-python-headless
-Pillow==10.4.0
-numpy
-```
-
----
+-----
 
 ## 🏃 Run Locally
 
-```bash
+bash
 pip install -r requirements.txt
 uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
-```
 
-Open:
 
-```text
-http://localhost:8000/docs
-```
+Open: http://localhost:8000/docs
 
----
+-----
 
 ## 🚀 Deploy on Railway
 
-1. Push code to GitHub.
-2. Open Railway project.
-3. Go to service settings.
-4. Set builder to Dockerfile.
-5. Deploy.
-6. Open `/docs` and verify the API.
+1. Push code to GitHub
+1. Open Railway → service → Settings → Build
+1. Set builder to *Dockerfile*
+1. Deploy
+1. Verify at /docs
 
-Check:
+-----
 
-```text
-GET /health
-POST /detect/hand
-```
+## 📱 Flutter Integration
 
----
-
-## 🔗 Frontend Integration
-
-Base URL:
-
-```dart
+dart
 const String baseUrl = "https://banan-sign-language-production.up.railway.app";
-```
 
-Health check example:
-
-```dart
-final response = await http.get(
-  Uri.parse('$baseUrl/health'),
-);
-
-print(response.body);
-```
-
-Detection example:
-
-```dart
+// Classify a sign from camera frame
 final response = await http.post(
-  Uri.parse('$baseUrl/detect/hand'),
-  headers: {
-    'Content-Type': 'application/json',
-  },
-  body: jsonEncode({
-    'image': base64Image,
-  }),
+  Uri.parse('$baseUrl/classify/sign'),
+  headers: {'Content-Type': 'application/json'},
+  body: jsonEncode({'image': base64Image}),
 );
 
-print(response.body);
-```
+final data = jsonDecode(response.body);
+if (data['data']['detected']) {
+  String label = data['data']['label'];
+  double confidence = data['data']['confidence'];
+}
 
----
 
-## 📱 Recommended Real-Time Architecture
+-----
 
-For best real-time performance:
+## 🔗 Related
 
-```text
-Flutter Camera
-↓
-MediaPipe on-device
-↓
-63 landmarks
-↓
-TFLite model
-↓
-Predicted letter
-↓
-Send final result to backend
-```
+- *GitHub:* github.com/FO7S/banan-sign-language
+- *Railway:* https://banan-sign-language-production.up.railway.app
+- *Supabase:* db.nirjsafygtrfrzgwzhvg.supabase.co
 
-The backend should mainly handle:
-
-* users
-* sessions
-* challenges
-* scoring
-* progress
-* leaderboard
-* achievements
-
----
-
-## 🔗 Related Repositories
-
-* Flutter App: contains the mobile app and TFLite model.
-* ML Training: contains model training notebooks and dataset processing.
-
----
+-----
 
 ## 👥 Team
 
-Built for deaf and hard-of-hearing children in Saudi Arabia, supporting accessibility and inclusive learning.
+Built for deaf and hard-of-hearing children in Saudi Arabia — aligned with Vision 2030 inclusion goals.
