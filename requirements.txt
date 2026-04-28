@@ -10,5 +10,5 @@ greenlet
 mediapipe==0.10.13
 opencv-python-headless
 Pillow==10.4.0
-tflite-runtime==2.14.0
-numpy
+tensorflow-cpu==2.17.0
+numpy<2
