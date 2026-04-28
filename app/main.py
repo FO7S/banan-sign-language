@@ -9,6 +9,7 @@ from app.db.database import engine
 from app.db.models import Base
 from app.routes import achievements, challenge, leaderboard, progress, session, user
 from app.routes.detect import router as detect_router
+from app.routes.classify import router as classify_router
 
 logging.basicConfig(
     level=logging.INFO,
@@ -72,6 +73,7 @@ app.include_router(leaderboard.router)
 app.include_router(user.router)
 app.include_router(achievements.router)
 app.include_router(detect_router, prefix="/detect", tags=["detect"])
+app.include_router(classify_router, prefix="/classify", tags=["classify"])
 
 
 @app.get("/health")
