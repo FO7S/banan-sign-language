@@ -1,10 +1,11 @@
 import base64
 import logging
 import numpy as np
-import cv2
 import mediapipe as mp
 from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel
+from PIL import Image
+import io
 from app.models.schemas import success_response, error_response
 
 logger = logging.getLogger(__name__)
@@ -18,18 +19,10 @@ class DetectRequest(BaseModel):
 @router.post("/hand")
 async def detect_hand(body: DetectRequest):
     try:
-        # 1. Decode base64 image
+        # 1. Decode base64 image using PIL (no opencv needed)
         image_bytes = base64.b64decode(body.image)
-        nparr = np.frombuffer(image_bytes, np.uint8)
-        bgr = cv2.imdecode(nparr, cv2.IMREAD_COLOR)
-
-        if bgr is None:
-            raise HTTPException(
-                status_code=400,
-                detail=error_response("Invalid image — could not decode")
-            )
-
-        rgb = cv2.cvtColor(bgr, cv2.COLOR_BGR2RGB)
+        pil_image = Image.open(io.BytesIO(image_bytes)).convert("RGB")
+        rgb = np.array(pil_image, dtype=np.uint8)
 
         # 2. Run MediaPipe Hands
         with mp_hands.Hands(
@@ -41,7 +34,7 @@ async def detect_hand(body: DetectRequest):
 
         # 3. No hand detected
         if not result.multi_hand_landmarks:
-            logger.info("detect_hand: no hand found")
+            logger.info("detect_hand: no hand found in image")
             return success_response(
                 {"detected": False, "landmarks": None},
                 "No hand detected"
@@ -49,9 +42,12 @@ async def detect_hand(body: DetectRequest):
 
         # 4. Extract 21 landmarks (x, y, z) = 63 values
         lms = result.multi_hand_landmarks[0]
-        pts = np.array([[lm.x, lm.y, lm.z] for lm in lms.landmark], dtype=np.float32)
+        pts = np.array(
+            [[lm.x, lm.y, lm.z] for lm in lms.landmark],
+            dtype=np.float32
+        )
 
-        # 5. Normalize landmarks — MUST match Flutter normalization exactly
+        # 5. Normalize landmarks — must match Flutter normalization exactly
         # Step A: subtract wrist (landmark index 0) from all points
         wrist = pts[0].copy()
         pts -= wrist
@@ -64,7 +60,7 @@ async def detect_hand(body: DetectRequest):
         # Step C: flatten to list of 63 floats
         normalized = pts.flatten().tolist()
 
-        logger.info(f"detect_hand: hand detected, {len(normalized)} landmarks returned")
+        logger.info(f"detect_hand: hand detected, returning {len(normalized)} landmark values")
 
         return success_response(
             {"detected": True, "landmarks": normalized},

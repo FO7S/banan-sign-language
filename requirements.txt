@@ -8,4 +8,4 @@ pydantic-settings==2.6.1
 python-dotenv==1.0.1
 greenlet
 mediapipe==0.10.35
-opencv-python-headless==4.10.0.84
+Pillow==10.4.0
