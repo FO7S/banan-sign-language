@@ -483,6 +483,3 @@ The backend should mainly handle:
 ## 👥 Team
 
 Built for deaf and hard-of-hearing children in Saudi Arabia, supporting accessibility and inclusive learning.
-
-هذا مبني على الـ README الحالي اللي رفعته، مع تعديل وصف الـ AI وإضافة Docker + detect endpoint بدل النص القديم اللي كان يقول إن كل الـ AI فقط on-device. :contentReference[oaicite:0]{index=0}
-```
