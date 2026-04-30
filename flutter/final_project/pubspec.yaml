@@ -1,0 +1,160 @@
+# name: final_project
+# description: إشارة-تيك - تطبيق لغة الإشارة العربية
+# publish_to: 'none'
+# version: 1.0.0+1
+
+# environment:
+#   sdk: '>=3.0.0 <4.0.0'
+
+# dependencies:
+#   flutter:
+#     sdk: flutter
+#   flutter_localizations:    # 🆕 هذي
+#     sdk: flutter            # 🆕 لازم تحتها
+    
+#   # Navigation
+#   go_router: ^13.0.0
+
+#   # Animations
+#   lottie: ^3.0.0
+#   animated_text_kit: ^4.2.2
+#   confetti: ^0.7.0
+
+#   # State Management
+#   provider: ^6.1.0
+
+#   # Camera
+#   camera: ^0.10.5
+
+#   # Voice/Speech
+#   speech_to_text: ^7.3.0 # 6.6.0
+
+#   # Storage
+#   shared_preferences: ^2.2.2
+
+#   # Fonts
+#   google_fonts: ^6.1.0
+
+#   # UI extras
+#   flutter_animate: ^4.5.0
+#   audioplayers: ^6.0.0
+
+#   cupertino_icons: ^1.0.2
+
+# dev_dependencies:
+#   flutter_test:
+#     sdk: flutter
+#   flutter_lints: ^3.0.0
+
+# flutter:
+#   uses-material-design: true
+#   assets:
+#     - assets/images/logo.png
+#     - assets/images/ArSL_letters/
+
+
+
+
+
+# name: banan
+# description: تطبيق بنان لتعليم لغة الإشارة العربية للأطفال
+# publish_to: 'none'
+# version: 1.0.0+1
+
+# environment:
+#   sdk: ">=3.0.0 <4.0.0"
+
+# dependencies:
+#   flutter:
+#     sdk: flutter
+#   flutter_localizations:
+#     sdk: flutter
+#   google_mlkit_pose_detection: ^0.14.0
+#   google_mlkit_commons: ^0.11.0
+
+
+#   # 🌐 Networking
+#   http: ^1.2.0
+
+#   # 🆔 توليد UUID للمستخدمين
+#   uuid: ^4.3.3
+
+#   # 💾 التخزين المحلي
+#   shared_preferences: ^2.2.2
+
+#   # 🎨 الواجهة
+#   cupertino_icons: ^1.0.6
+#   google_fonts: ^6.2.1
+#   flutter_animate: ^4.5.0
+#   confetti: ^0.7.0
+#   provider: ^6.1.2
+
+#   # 📷 الكاميرا والصوت
+#   camera: ^0.11.0
+#   speech_to_text: ^7.3.0
+
+# dev_dependencies:
+#   flutter_test:
+#     sdk: flutter
+#   flutter_lints: ^3.0.0
+
+# flutter:
+#   uses-material-design: true
+
+#   assets:
+#     - assets/images/logo.png
+#     - assets/images/ArSL_letters/
+
+
+
+name: banan
+description: تطبيق بنان لتعليم لغة الإشارة العربية للأطفال
+publish_to: 'none'
+version: 1.0.0+1
+
+environment:
+  sdk: ">=3.0.0 <4.0.0"
+
+dependencies:
+  flutter:
+    sdk: flutter
+  flutter_localizations:
+    sdk: flutter
+  google_mlkit_pose_detection: ^0.14.0
+  google_mlkit_commons: ^0.11.0
+
+
+  # 🌐 Networking
+  http: ^1.2.0
+
+  # 🆔 توليد UUID للمستخدمين
+  uuid: ^4.3.3
+
+  # 💾 التخزين المحلي
+  shared_preferences: ^2.2.2
+
+  # 🎨 الواجهة
+  cupertino_icons: ^1.0.6
+  google_fonts: ^6.2.1
+  flutter_animate: ^4.5.0
+  confetti: ^0.7.0
+  provider: ^6.1.2
+
+  # 📷 الكاميرا والصوت
+  camera: ^0.11.0
+  speech_to_text: ^7.3.0
+
+  # 🖼️ معالجة الصور (لعكس صورة الكاميرا الأماميّة قبل الإرسال)
+  image: ^4.1.7
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^3.0.0
+
+flutter:
+  uses-material-design: true
+
+  assets:
+    - assets/images/logo.png
+    - assets/images/ArSL_letters/
