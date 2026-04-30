@@ -5,7 +5,7 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 
 class Settings(BaseSettings):
     DATABASE_URL: str
-    CONFIDENCE_THRESHOLD: float = 0.80
+    CONFIDENCE_THRESHOLD: float = 0.65
     COOLDOWN_SECONDS: float = 1.0
     NO_HAND_TIMEOUT: float = 2.0
 
